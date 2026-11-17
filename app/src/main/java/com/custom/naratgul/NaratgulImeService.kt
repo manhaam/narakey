@@ -21,8 +21,6 @@ class NaratgulImeService : InputMethodService() {
     private lateinit var layoutSymbol: LinearLayout
 
     private var isShift = false
-    private var puncIndex = 0
-    private val puncCycle = listOf(".", ",", "?", "!")
 
     override fun onCreateInputView(): View {
         val root = layoutInflater.inflate(R.layout.keyboard_view, null)
@@ -30,6 +28,8 @@ class NaratgulImeService : InputMethodService() {
         layoutEnglish = root.findViewById(R.id.layoutEnglish)
         layoutSymbol = root.findViewById(R.id.layoutSymbol)
 
+        setupNumberRow(root.findViewById(R.id.koNumRow), true)
+        setupNumberRow(root.findViewById(R.id.enNumRow), false)
         setupKoreanKeys(root)
         setupEnglishKeys(root)
         setupSymbolKeys(root)
@@ -40,7 +40,6 @@ class NaratgulImeService : InputMethodService() {
     override fun onStartInputView(info: EditorInfo?, restarting: Boolean) {
         super.onStartInputView(info, restarting)
         automata.reset()
-        puncIndex = 0
     }
 
     override fun onFinishInputView(finishingInput: Boolean) {
@@ -65,6 +64,19 @@ class NaratgulImeService : InputMethodService() {
         layoutSymbol.visibility = if (mode == "SYM") View.VISIBLE else View.GONE
     }
 
+    private fun setupNumberRow(container: LinearLayout, commitHangul: Boolean) {
+        val nums = listOf("1", "2", "3", "4", "5", "6", "7", "8", "9", "0")
+        for (n in nums) {
+            val btn = createKeyButton(n, true, 1f, 15f)
+            btn.setOnClickListener {
+                vibrateTick()
+                if (commitHangul) automata.commitCurrent(currentInputConnection)
+                currentInputConnection?.commitText(n, 1)
+            }
+            container.addView(btn)
+        }
+    }
+
     private fun setupKoreanKeys(root: View) {
         val consonants = mapOf(
             R.id.k_g to 'ㄱ',
@@ -77,32 +89,27 @@ class NaratgulImeService : InputMethodService() {
         for ((id, ch) in consonants) {
             root.findViewById<Button>(id).setOnClickListener {
                 vibrateTick()
-                puncIndex = 0
                 automata.inputConsonant(currentInputConnection, ch)
             }
         }
 
         root.findViewById<Button>(R.id.k_aeo).setOnClickListener {
             vibrateTick()
-            puncIndex = 0
             automata.inputVowelToggle(currentInputConnection, 'ㅏ', 'ㅓ')
         }
 
         root.findViewById<Button>(R.id.k_ou).setOnClickListener {
             vibrateTick()
-            puncIndex = 0
             automata.inputVowelToggle(currentInputConnection, 'ㅗ', 'ㅜ')
         }
 
         root.findViewById<Button>(R.id.k_i).setOnClickListener {
             vibrateTick()
-            puncIndex = 0
             automata.inputSingleVowel(currentInputConnection, 'ㅣ')
         }
 
         root.findViewById<Button>(R.id.k_eu).setOnClickListener {
             vibrateTick()
-            puncIndex = 0
             automata.inputSingleVowel(currentInputConnection, 'ㅡ')
         }
 
@@ -118,51 +125,35 @@ class NaratgulImeService : InputMethodService() {
 
         root.findViewById<Button>(R.id.k_del).setOnClickListener {
             vibrateTick()
-            puncIndex = 0
             automata.backspace(currentInputConnection)
         }
 
         root.findViewById<Button>(R.id.k_space).setOnClickListener {
             vibrateTick()
-            puncIndex = 0
             automata.commitCurrent(currentInputConnection)
             currentInputConnection?.commitText(" ", 1)
         }
 
         root.findViewById<Button>(R.id.k_enter).setOnClickListener {
             vibrateTick()
-            puncIndex = 0
             automata.commitCurrent(currentInputConnection)
             sendDefaultEditorAction(true)
             sendDownUpKeyEvents(KeyEvent.KEYCODE_ENTER)
         }
 
-        root.findViewById<Button>(R.id.k_punc).setOnClickListener {
+        root.findViewById<Button>(R.id.k_qmark).setOnClickListener {
             vibrateTick()
-            val ic = currentInputConnection ?: return@setOnClickListener
-            automata.commitCurrent(ic)
-            if (puncIndex > 0) {
-                ic.deleteSurroundingText(1, 0)
-            }
-            val ch = puncCycle[puncIndex % puncCycle.size]
-            ic.commitText(ch, 1)
-            puncIndex++
-        }
-
-        root.findViewById<Button>(R.id.k_comma).setOnClickListener {
-            vibrateTick()
-            puncIndex = 0
             automata.commitCurrent(currentInputConnection)
-            currentInputConnection?.commitText(",", 1)
+            currentInputConnection?.commitText("?", 1)
         }
 
-        root.findViewById<Button>(R.id.k_dot).setOnClickListener {
+        root.findViewById<Button>(R.id.k_exclam).setOnClickListener {
             vibrateTick()
-            puncIndex = 0
             automata.commitCurrent(currentInputConnection)
-            currentInputConnection?.commitText(".", 1)
+            currentInputConnection?.commitText("!", 1)
         }
 
+        root.findViewById<Button>(R.id.k_123).setOnClickListener { vibrateTick(); switchMode("SYM") }
         root.findViewById<Button>(R.id.k_to_en).setOnClickListener { vibrateTick(); switchMode("EN") }
         root.findViewById<Button>(R.id.k_to_sym).setOnClickListener { vibrateTick(); switchMode("SYM") }
     }
@@ -243,12 +234,12 @@ class NaratgulImeService : InputMethodService() {
         root.findViewById<Button>(R.id.sym_to_en).setOnClickListener { vibrateTick(); switchMode("EN") }
     }
 
-    private fun createKeyButton(label: String, isFunc: Boolean, weight: Float): Button {
+    private fun createKeyButton(label: String, isFunc: Boolean, weight: Float, textSizeSp: Float = 18f): Button {
         return Button(this).apply {
             text = label
             isAllCaps = false
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f)
-            setTextColor(Color.parseColor("#0F172A"))
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, textSizeSp)
+            setTextColor(Color.WHITE)
             setBackgroundResource(if (isFunc) R.drawable.key_func_bg else R.drawable.key_bg)
             setPadding(0, 0, 0, 0)
             layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, weight).apply {
