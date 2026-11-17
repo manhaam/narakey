@@ -216,7 +216,7 @@ class NaratgulImeService : InputMethodService() {
     private fun setupSymbolKeys(root: View) {
         val row1 = listOf("1", "2", "3", "4", "5", "6", "7", "8", "9", "0")
         val row2 = listOf("@", "#", "$", "%", "&", "-", "+", "(", ")", "/")
-        val row3 = listOf("*", """, "'", ":", ";", "!", "?", "~", "⌫")
+        val row3 = listOf("*", "\"", "'", ":", ";", "!", "?", "~", "⌫")
 
         fun populateSym(container: LinearLayout, keys: List<String>) {
             for (k in keys) {
